@@ -1,5 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System;
+using System.Linq;
 
 public class MapGenerator : MonoBehaviour
 {
@@ -8,7 +10,9 @@ public class MapGenerator : MonoBehaviour
     [Header("Map settings")]
     public int controlPointCount = 15;
     public float yStep = 2f;
-    public float xRange = 3f;
+    public float xRange = 5f;
+    public float mapWidth { get; set; } = 2f;
+    public float screenBottomY { get; set; } = -5f;
 
     public List<Vector3> controlPoints = new List<Vector3>();
 
@@ -41,6 +45,7 @@ public class MapGenerator : MonoBehaviour
         ScrollMap();
         CheckAndGenerateMorePoints();
         DrawSpline();
+        Debug.Log(GetHardness());
     }
 
     void GenerateInitialPoints()
@@ -50,8 +55,7 @@ public class MapGenerator : MonoBehaviour
 
         for (int i = 0; i < controlPointCount; i++)
         {
-            point.x += Random.Range(-xRange, xRange);
-            point.y += yStep;
+            point = GenerateNewPoint(point.y, this.yStep, point.x);
             controlPoints.Add(point);
         }
     }
@@ -62,9 +66,19 @@ public class MapGenerator : MonoBehaviour
         {
             controlPoints.RemoveAt(0);
             Vector3 last = controlPoints[controlPoints.Count - 1];
-            Vector3 next = last + new Vector3(Random.Range(-xRange, xRange), yStep, 0);
+            Vector3 next = GenerateNewPoint(last.y, this.yStep, last.x);
             controlPoints.Add(next);
         }
+    }
+
+    Vector3 GenerateNewPoint(float y, float yStep, float x)
+    {
+        Vector3 point = Vector3.zero;
+        point.x += UnityEngine.Random.Range(-xRange, xRange);
+        point.x = Math.Clamp(point.x, -this.mapWidth, this.mapWidth);
+        Debug.Log(point.x);
+        point.y = y + yStep;
+        return point;
     }
 
     void ScrollMap()
@@ -115,6 +129,13 @@ public class MapGenerator : MonoBehaviour
         }
 
         return curvePoints;
+    }
+
+    public float GetHardness()
+    {
+        var splinePoints = this.GenerateBSplinePoints(this.controlPoints, this.splineResolution);
+        var splinePointsAboveScreen = splinePoints.Where(p => p.y > this.screenBottomY).ToList();
+        return Vector3.Distance(splinePointsAboveScreen[0], splinePointsAboveScreen[1]);
     }
 
 
