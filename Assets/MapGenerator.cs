@@ -12,7 +12,7 @@ public class MapGenerator : MonoBehaviour
     public float yStep = 2f;
     public float xRange = 5f;
     public float mapWidth { get; set; } = 2f;
-    public float screenBottomY { get; set; } = -5f;
+    public float screenBottomY { get; set; } = -4f;
 
     public List<Vector3> controlPoints = new List<Vector3>();
 
@@ -135,8 +135,40 @@ public class MapGenerator : MonoBehaviour
     {
         var splinePoints = this.GenerateBSplinePoints(this.controlPoints, this.splineResolution);
         var splinePointsAboveScreen = splinePoints.Where(p => p.y > this.screenBottomY).ToList();
-        return Vector3.Distance(splinePointsAboveScreen[0], splinePointsAboveScreen[1]);
+
+        var angles = new List<float>();
+
+        for (int i = 1; i < splinePointsAboveScreen.Count - 1; i++)
+        {
+            Vector3 dir1 = (splinePointsAboveScreen[i] - splinePointsAboveScreen[i - 1]).normalized;
+            Vector3 dir2 = (splinePointsAboveScreen[i + 1] - splinePointsAboveScreen[i]).normalized;
+            float angle = Vector3.Angle(dir1, dir2);
+            angles.Add(angle);
+        }
+
+        // Optionally emphasize sharper angles
+        float average = angles.Count > 0 ? angles.Take(50).Average() : 0f;
+
+        return (float)Math.Round(average, 2);
     }
+
+    void OnDrawGizmos()
+    {
+        if (controlPoints == null || controlPoints.Count < 2 || lineRenderer == null)
+            return;
+
+        List<Vector3> splinePoints = GenerateBSplinePoints(controlPoints, splineResolution);
+        List<Vector3> splinePointsAboveScreen = splinePoints.Where(p => p.y > screenBottomY).ToList();
+
+        Gizmos.color = Color.red;
+
+        for (int i = 1; i < 50; i++)
+        {
+            Vector3 p = splinePointsAboveScreen[i];
+            Gizmos.DrawSphere(p, 0.05f); // Small red spheres on debug points
+        }
+    }
+
 
 
     float CoxDeBoor(float t, int i, int k, List<float> knots)
